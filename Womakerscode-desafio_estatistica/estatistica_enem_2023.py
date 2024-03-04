@@ -29,6 +29,7 @@ def enem_new(df):
 
 # Visualizando a tabela juntamente com a amplitude calculada.
 print(enem_new(enem_dados))
+print("A disciplina com maior amplitude de nota é Redação, como visto na tabela anterior.")
 
 # 2. Qual é a média e a mediana para cada uma das disciplinas? (Lembre-se de remover todos os valores nulos 
 # quando considerar a mediana)
@@ -121,27 +122,28 @@ print(f"Teto do terceiro quartil para Linguagens: {teto_q3_linguagens}")
 # Podemos dizer que são histogramas simétricos, justifique e classifique
 # se não assimétricas?
 
-#columns = ['Redação', 'Linguagens']
-#for column in columns:
-#    plt.figure()  # Crie uma nova figura para cada histograma
-#    sns.histplot(data=enem_dados, x=column, bins=np.arange(0, enem_dados[column].max() + 20, 20), kde=True)
-#    plt.title("Histograma: "+column)
-#    plt.xlabel(column)
-#    plt.ylabel("Frequência")
-#    plt.show()
+columns = ['Redação', 'Linguagens']
+for column in columns:
+    plt.figure()  # Crie uma nova figura para cada histograma
+    sns.histplot(data=enem_dados, x=column, bins=np.arange(0, enem_dados[column].max() + 20, 20), kde=True)
+    plt.title("Histograma: "+column)
+    plt.xlabel(column)
+    plt.ylabel("Frequência")
+    plt.show()
+print("Os histogramas são simétricos, pois desempenham bem a distribuição normal da curva unimodal.")
 
 # 7. Agora coloque um range fixo de 0 até 1000, você ainda tem a mesma
 # opinião quanto a simetria? [plt.hist(dado, bins=_, range=[0, 1000]).
 
-#columns = ['Redação', 'Linguagens']
-#for column in columns:
-#    plt.figure(figsize=(8,4))  # Crie uma nova figura para cada histograma
-#    sns.histplot(enem_dados[column], bins=range(0, 1001, 20), kde=True, color='red') 
-#    plt.title("Histograma: "+column)
-#    plt.xlabel(column)
-#    plt.ylabel("Frequência")
-#    plt.show()
-
+columns = ['Redação', 'Linguagens']
+for column in columns:
+    plt.figure(figsize=(8,4))  # Crie uma nova figura para cada histograma
+    sns.histplot(enem_dados[column], bins=range(0, 1001, 20), kde=True, color='red') 
+    plt.title("Histograma: "+column)
+    plt.xlabel(column)
+    plt.ylabel("Frequência")
+    plt.show()
+print("Apesar de aumentar o range do gráfico fazendo com que a curva se alargue,\na distribuição continua sendo normal e simétrica.")
 # 8. Faça um boxplot do quartil de todas as disciplinas de ciências da
 # natureza e redação. É possível enxergar outliers? Utilize o método IQR.
 
@@ -163,19 +165,24 @@ def find_outlier_iqr(dataset, colname):
     lower = q1 - cut_off
     upper = q3 + cut_off
 
-    outliers = dataset[(dataset[colname] < lower) | (dataset[colname] > upper)][colname]
+    outliers = []
+
+    for i in dataset[colname].values:
+        if ((i > upper) or (i < lower)):
+            outliers.append(i)
     print(f"\nDisciplina '{colname}':")
     print(f"IQR: {iqr}")
-    print(f"Número de outliers encontrados: {len(outliers)}")
+    print("O número de outliers encontrado foi de", len(outliers))
     print(outliers)
-
     return lower, upper, outliers
+
 
 disciplinas = ['Ciências da natureza', 'Redação']
 
 for disciplina in disciplinas:
-    plt.figure(figsize=(8, 4))
+    
     lower, upper, outliers = find_outlier_iqr(enem_dados, disciplina)
+    plt.figure(figsize=(8, 4))
     sns.boxplot(enem_dados[disciplinas], color='cyan', showfliers=True)
     plt.title("Boxplot: " +  ' e ' .join(disciplinas))
     plt.ylabel("Notas")
@@ -187,7 +194,102 @@ for disciplina in disciplinas:
 # valor acima de 5%).
     
 
-def replace_outliers(dataset, colname):
+def remove_outliers(dataset, colname, lower, upper):
+
+    remove_data = dataset[(dataset[colname] >= lower) & (dataset[colname] <= upper)]
+
+    return remove_data
+
+# Média antes de remover os outliers:
+
+media_antes = enem_dados[['Ciências da natureza', 'Redação']].mean()
+clear_data = enem_dados.copy()
+
+
+for disciplina in disciplinas:
+    lower, upper, _ = find_outlier_iqr(clear_data, disciplina)
+    clear_data = remove_outliers(clear_data, disciplina, lower, upper)
+
+# Média depois de remover os outliers
+    
+media_depois = clear_data[['Ciências da natureza', 'Redação']].mean()
+
+# Comparando as duas médias, antes e depois da remoção de outliers 
+
+alteracao_percentual = ((media_depois - media_antes) / media_antes) * 100
+
+# Verificando se o percentual de alteração é acima de 5%
+
+percentual = any(abs(alteracao_percentual) > 5)
+
+
+print(f"Média antes de remover os outliers:\n{media_antes}")
+print(f"\nMédia depois de remover os outliers:\n{media_depois}")
+print(f"\nAlteração Percentual:\n{alteracao_percentual}")
+print(f"\nAlteração significativa é maior que 5%? \n{percentual}")
+print("No entanto a remoção de outliers não é passível de alterar a média nacional\nsignificativamente.")
+
+
+# 10.  Considerando valores nulos, tente encontrar qual seria a melhor medida
+# de tendência que pode substituir as notas nulas. Média, moda ou
+# mediana? Substitua o valor por todos os três e diga qual delas altera
+# menos a média geral e o desvio padrão.
+
+
+notas = enem_dados[['Linguagens', 'Ciências humanas', 'Ciências da natureza', 'Matemática', 'Redação']]
+
+# Calculando média, moda e mediana para substituir os valores nulos
+
+media = notas.mean()
+moda = notas.mode().iloc[0]
+mediana = notas.median()
+
+print(media)
+print(moda)
+print(mediana)
+
+# Substituindo os valores nulos pela media, moda e mediana
+
+notas_media = notas.fillna(media)
+notas_moda = notas.fillna(moda)
+notas_mediana = notas.fillna(mediana)
+
+# Calcular então a média geral e o desvio padrão para cada caso acima
+
+# média
+media_geral_media = notas_media.mean()
+desv_pad_media = notas_media.std()
+
+# moda
+
+media_geral_moda = notas_moda.mean()
+desv_pad_moda = notas_moda.std()
+
+# mediana
+
+media_geral_mediana = notas_mediana.mean()
+desv_pad_mediana = notas_mediana.std()
+
+# Comparar as alterações na média geral e no desvio padrão
+alteracao_media = {
+    'media': abs(media_geral_media - media),
+    'moda': abs(media_geral_moda - media),
+    'mediana': abs(media_geral_mediana - media)
+}
+
+alteracao_desvio_padrao = {
+    'media': abs(desv_pad_media - notas.std()),
+    'moda': abs(desv_pad_moda - notas.std()),
+    'mediana': abs(desv_pad_mediana - notas.std())
+}
+
+print(f"\nAlteração na média geral: {alteracao_media}")
+print(f"\nAlteração no desvio padrão: \n{alteracao_desvio_padrao}")
+print("\n\nChegando a conclusão de que a média e a mediana são valores que alteram menos a média geral dos dados\nsendo ideais para substituir em casos de valores nulos.")
+
+
+
+
     
 
 
